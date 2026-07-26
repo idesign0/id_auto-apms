@@ -82,6 +82,26 @@ std::string RosNodeContext::getFullyQualifiedTreeNodeName(const BT::TreeNode * n
 
 YAML::Node RosNodeContext::getExtraOptions() const { return registration_options_.extra; }
 
+rclcpp::Node::SharedPtr RosNodeContext::getRosNode() const
+{
+  const rclcpp::Node::SharedPtr node = nh_.lock();
+  if (!node) {
+    throw exceptions::RosNodeError(
+      "Cannot access the associated ROS 2 node from the RosNodeContext because the weak pointer expired. The tree "
+      "node doesn't take ownership of it.");
+  }
+  return node;
+}
+
+rclcpp::CallbackGroup::SharedPtr RosNodeContext::getWaitablesCallbackGroup() const { return cb_group_.lock(); }
+
+rclcpp::executors::SingleThreadedExecutor::SharedPtr RosNodeContext::getWaitablesExecutor() const
+{
+  return executor_.lock();
+}
+
+const NodeRegistrationOptions & RosNodeContext::getRegistrationOptions() const { return registration_options_; }
+
 BT::Expected<std::string> RosNodeContext::getTopicName(const BT::TreeNode * node) const
 {
   std::string res = registration_options_.topic;
