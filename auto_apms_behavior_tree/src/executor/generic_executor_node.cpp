@@ -489,6 +489,11 @@ rcl_interfaces::msg::SetParametersResult GenericTreeExecutorNode::on_set_paramet
 
     // Check if parameter is known
     if (!auto_apms_util::contains(TREE_EXECUTOR_EXPLICITLY_ALLOWED_PARAMETERS, param_name)) {
+      // Not a parameter managed by the executor. When strict removal is disabled, the executor is embedded in a node
+      // that intentionally declares its own additional parameters (see
+      // TreeExecutorNodeOptions::enableStrictUnkownParameterRemoval), so leave those foreign parameters untouched
+      // instead of rejecting them. Otherwise the executor owns the full parameter set and an unknown name is an error.
+      if (!executor_options_.strict_unkown_parameter_removal_) continue;
       return create_rejected("Parameter is unknown");
     }
 

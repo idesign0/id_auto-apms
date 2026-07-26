@@ -156,6 +156,7 @@ public:
   static inline const char INCLUDE_ELEMENT_NAME[] = "include";
   static inline const char INCLUDE_PATH_ATTRIBUTE_NAME[] = "path";
   static inline const char INCLUDE_ROS_PKG_ATTRIBUTE_NAME[] = "ros_pkg";
+  static inline const char INCLUDE_RESOURCE_ATTRIBUTE_NAME[] = "autoapms";
 
   class TreeElement;
 

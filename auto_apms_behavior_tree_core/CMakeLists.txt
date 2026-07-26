@@ -132,7 +132,7 @@ if(BUILD_TESTING)
     "test/unit/ros_subscriber_node.cpp"
     "test/unit/tree_document_node_element.cpp"
     "test/unit/tree_document_node_model.cpp"
-    "test/unit/tree_document_recursive_include.cpp"
+    "test/unit/tree_document_include.cpp"
     "test/unit/tree_document_tree_generation.cpp"
   )
   target_link_libraries(${PROJECT_NAME}_unit_tests

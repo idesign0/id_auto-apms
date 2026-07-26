@@ -78,7 +78,12 @@ TreeResource::TreeResource(const TreeResourceIdentity & search_identity) : Behav
   }
 
   // Verify that the tree <tree_name> specified by the identity string is actually present
-  if (!unique_identity_.tree_name.empty()) {
+  if (unique_identity_.tree_name.empty()) {
+    throw std::logic_error(
+      "TreeResource identity '" + unique_identity_.str() +
+      "' is invalid. The <tree_name> token must be non-empty in the identity string. This should have been caught by "
+      "TreeResourceIdentity constructor.");
+  } else {
     if (!auto_apms_util::contains(doc.getAllTreeNames(), unique_identity_.tree_name)) {
       throw auto_apms_util::exceptions::ResourceError(
         "Cannot create TreeResource with identity '" + unique_identity_.str() + "' because '" +
