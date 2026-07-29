@@ -24,9 +24,9 @@ RosNodeBase::RosNodeBase(const std::string & instance_name, Context context)
 {
 }
 
-BT::PortsRemapping RosNodeBase::portAliasRemapping(const BT::TreeNode * node) const
+void RosNodeBase::applyPortAliasing(const BT::TreeNode * node) const
 {
-  return context_.copyAliasedPortValuesToOriginalPorts(node);
+  context_.copyAliasedPortValuesToOriginalPorts(node);
 }
 
 }  // namespace auto_apms_behavior_tree::core

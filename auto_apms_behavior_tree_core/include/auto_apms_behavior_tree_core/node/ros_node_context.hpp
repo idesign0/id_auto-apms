@@ -135,15 +135,16 @@ public:
 
 private:
   /**
-   * @brief Compute the port remapping that copies aliased port values to their original ports (node manifest
-   * 'port_alias' feature).
+   * @brief Copy aliased port values onto their original ports directly in the node config (node manifest 'port_alias'
+   * feature).
    *
-   * Used internally by RosNodeBase to apply port aliasing at construction time.
+   * Used internally by RosNodeBase to apply port aliasing at construction time. Writes the value the user set on each
+   * aliased port onto the original port the node implementation reads, inserting the original port into the config when
+   * it is not already present (which is the case for ports without a default value).
    *
    * @param node Pointer to the behavior tree node instance.
-   * @return Remapping from original port keys to the values held by their aliased ports.
    */
-  BT::PortsRemapping copyAliasedPortValuesToOriginalPorts(const BT::TreeNode * node) const;
+  void copyAliasedPortValuesToOriginalPorts(const BT::TreeNode * node) const;
 
   void modifyProvidedPortsListForRegistration(BT::PortsList & ports_list) const;
 

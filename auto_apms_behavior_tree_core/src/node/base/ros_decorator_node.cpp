@@ -21,7 +21,7 @@ RosDecoratorNode::RosDecoratorNode(const std::string & instance_name, const Conf
 : BT::DecoratorNode(instance_name, config), RosNodeBase(instance_name, context)
 {
   // Support the node manifest 'port_alias' feature (see RosStatefulActionNode for details).
-  modifyPortsRemapping(portAliasRemapping(this));
+  applyPortAliasing(this);
 }
 
 BT::PortsList RosDecoratorNode::providedPorts() { return {}; }

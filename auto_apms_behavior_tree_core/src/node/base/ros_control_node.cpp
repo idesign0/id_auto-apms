@@ -21,7 +21,7 @@ RosControlNode::RosControlNode(const std::string & instance_name, const Config &
 : BT::ControlNode(instance_name, config), RosNodeBase(instance_name, context)
 {
   // Support the node manifest 'port_alias' feature (see RosStatefulActionNode for details).
-  modifyPortsRemapping(portAliasRemapping(this));
+  applyPortAliasing(this);
 }
 
 BT::PortsList RosControlNode::providedPorts() { return {}; }

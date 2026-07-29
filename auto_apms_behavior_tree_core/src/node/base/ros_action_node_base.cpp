@@ -22,7 +22,7 @@ RosActionNodeBase::RosActionNodeBase(const std::string & instance_name, const Co
 {
   // Support the node manifest 'port_alias' feature. Applied here (before the derived constructor body runs) so the
   // aliased ports are already in effect for any port access the derived node performs during construction.
-  modifyPortsRemapping(portAliasRemapping(this));
+  applyPortAliasing(this);
 }
 
 BT::PortsList RosActionNodeBase::providedPorts() { return {}; }

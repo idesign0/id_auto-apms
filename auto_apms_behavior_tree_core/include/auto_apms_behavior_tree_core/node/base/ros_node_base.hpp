@@ -34,9 +34,8 @@ namespace auto_apms_behavior_tree::core
  * ROS-aware wrappers around the basic BehaviorTree.CPP node types (RosSyncActionNode, RosStatefulActionNode,
  * RosConditionNode, RosDecoratorNode, RosControlNode) share identical construction logic instead of duplicating it.
  *
- * Applying the node-manifest port aliasing must be done by the derived node itself (it requires the protected
- * `BT::TreeNode::modifyPortsRemapping`), so this base only provides the remapping to apply via portAliasRemapping();
- * the wrappers call it from their constructor.
+ * Applying the node-manifest port aliasing is triggered by the derived node itself via applyPortAliasing(); the
+ * wrappers call it from their constructor once the node is fully constructed.
  *
  * It additionally provides getSharedEntity(), the shared-entity registry used by the provided ROS node bases
  * (RosPublisherNode, RosSubscriberNode, RosServiceNode, RosActionNode) and available to any downstream node so that
@@ -55,15 +54,14 @@ protected:
   ~RosNodeBase() = default;
 
   /**
-   * @brief Support the node manifest 'port_alias' feature: compute the remapping that copies aliased port values onto
-   * the original ports the node implementation reads.
+   * @brief Support the node manifest 'port_alias' feature: copy the aliased port values onto the original ports the
+   * node implementation reads.
    *
-   * The derived (BT::TreeNode) node must apply the returned remapping via `BT::TreeNode::modifyPortsRemapping`.
+   * Must be called by the derived (BT::TreeNode) node from its constructor.
    *
    * @param node The tree node instance (usually `this`).
-   * @return Remapping from original port keys to the values held by their aliased ports.
    */
-  BT::PortsRemapping portAliasRemapping(const BT::TreeNode * node) const;
+  void applyPortAliasing(const BT::TreeNode * node) const;
 
   /**
    * @brief Retrieve a process-wide shared ROS 2 entity, creating it via @p factory on first use.
