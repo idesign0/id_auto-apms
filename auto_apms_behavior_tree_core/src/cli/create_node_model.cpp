@@ -73,7 +73,6 @@ int main(int argc, char ** argv)
 
     const rclcpp::Logger logger = rclcpp::get_logger("create_node_model__" + output_file.stem().string());
 
-    BT::BehaviorTreeFactory factory;
     const auto manifest = core::NodeManifest::fromFile(manifest_file.string());
 
     /**
@@ -81,9 +80,19 @@ int main(int argc, char ** argv)
      * customizing the internal node/library allocation map.
      */
 
+    // Declare the class loaders BEFORE the BehaviorTreeFactory so that, at scope exit, the
+    // factory -- which holds node builders that reference code inside the loaded plugin
+    // libraries -- is destroyed FIRST, i.e. before these ClassLoaders unload (dlclose) those
+    // libraries. On macOS dlclose eagerly unmaps the dylib, so the reverse order (the factory
+    // torn down after the libraries were already unmapped) dereferences unmapped vtables ->
+    // SIGSEGV during factory destruction, even though the node model XML was written
+    // successfully ("make: *** [node_model_native.xml] Segmentation fault: 11"). Linux glibc
+    // typically keeps the mapping resident, which is why the ordering bug only bites on macOS.
+    std::vector<std::unique_ptr<class_loader::ClassLoader>> class_loaders;
+    BT::BehaviorTreeFactory factory;
+
     // Instantiate loaders for all libraries in library_paths (We don't use class_loader::MultiLibraryClassLoader
     // because we want to keep track of the libraries that the nodes come from for debugging purposes)
-    std::vector<std::unique_ptr<class_loader::ClassLoader>> class_loaders;
     for (const auto & path : library_paths) {
       try {
         class_loaders.push_back(std::make_unique<class_loader::ClassLoader>(path));
