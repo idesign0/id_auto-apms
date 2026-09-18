@@ -147,6 +147,19 @@ int main(int argc, char ** argv)
       }
     }
 
+    // macOS: intentionally leak the ClassLoaders so their libraries are never dlclose()d. On macOS
+    // dlclose eagerly unmaps the dylib; the BehaviorTreeFactory (and its node builders / the
+    // plugins' static registrations) still reference code inside these libraries at process
+    // teardown, so letting the loaders destruct — in ANY order, even after the factory — unmaps
+    // that code and dereferences it -> "make: *** [node_model_native.xml] Segmentation fault: 11"
+    // AFTER the model XML has already been written. (Declaration order alone is insufficient
+    // because the plugins' registrations outlive both.) This is a one-shot CLI, so leaking is
+    // harmless — the OS reclaims everything on exit. Linux glibc usually keeps the mapping
+    // resident on dlclose, which is why this only bites on macOS.
+    for (auto & _loader : class_loaders) {
+      (void)_loader.release();
+    }
+
     // Generate node model XML from the factory
     const std::string model_xml = BT::writeTreeNodesModelXML(factory);
 
