@@ -36,7 +36,7 @@ NodeManifestResourceIdentity::NodeManifestResourceIdentity(const std::string & i
       pos == std::string::npos) {
     // If only a single token is given, assume it's metadata_id
     package_name = "";
-    metadata_id = metadata_id;
+    metadata_id = identity;  // was a no-op self-assign (metadata_id = metadata_id) -> left empty -> threw
   } else {
     package_name = identity.substr(0, pos);
     metadata_id = identity.substr(pos + std::string(_AUTO_APMS_BEHAVIOR_TREE_CORE__RESOURCE_IDENTITY_ALIAS_SEP).size());
