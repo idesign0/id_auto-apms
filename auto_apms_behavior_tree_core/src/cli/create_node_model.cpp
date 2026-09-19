@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <cstdlib>  // std::_Exit
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -183,5 +184,13 @@ int main(int argc, char ** argv)
     return EXIT_FAILURE;
   }
 
-  return EXIT_SUCCESS;
+  // macOS: the node model XML is fully written by now (doc.writeToFile above). Terminate with
+  // std::_Exit so the process does NOT run static/atexit destructors: the behavior-tree node
+  // plugins were dlopen'd (and intentionally leaked, above) and their exit-time destructors —
+  // run by the dynamic loader when the process unwinds — dereference code in dylibs being torn
+  // down, crashing AFTER the file is written ("[node_model_native.xml] Segmentation fault: 11").
+  // Skipping global teardown avoids that; a one-shot generator has nothing else to clean up.
+  std::cout.flush();
+  std::cerr.flush();
+  std::_Exit(EXIT_SUCCESS);
 }
