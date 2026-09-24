@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cstdlib>  // std::_Exit
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -76,5 +77,20 @@ int main(int argc, char ** argv)
     return EXIT_FAILURE;
   }
 
-  return EXIT_SUCCESS;
+  // macOS: the output file is fully written by now. Terminate with std::_Exit so the process does
+  // NOT run destructors: TreeDocument owns a pluginlib::ClassLoader, whose teardown reaches
+  // class_loader::MultiLibraryClassLoader::shutdownAllClassLoaders() -> dlclose(). macOS unmaps the
+  // dylib eagerly, so the unwinding loader then dereferences freed vtables and the process dies with
+  // SIGSEGV *after* the file was written ("Segmentation fault: 11" from make, no exception, no
+  // stderr). Captured stack (.ips crash report, kilted run 35777232883):
+  //   0 class_loader::MultiLibraryClassLoader::getRegisteredLibraries()
+  //   1 class_loader::MultiLibraryClassLoader::shutdownAllClassLoaders()
+  //   2 class_loader::MultiLibraryClassLoader::~MultiLibraryClassLoader()
+  //   3 pluginlib::ClassLoader<...NodeRegistrationInterface>::~ClassLoader()
+  //   EXC_BAD_ACCESS (SIGSEGV), KERN_INVALID_ADDRESS at 0x38
+  // Skipping teardown is safe: a one-shot generator has nothing else to clean up. Same treatment as
+  // create_node_model.cpp.
+  std::cout.flush();
+  std::cerr.flush();
+  std::_Exit(EXIT_SUCCESS);
 }
