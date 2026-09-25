@@ -668,11 +668,54 @@ TreeDocument::TreeElement & TreeDocument::TreeElement::removeChildren()
   return *this;
 }
 
+namespace
+{
+/**
+ * @brief Class-name -> package-name map for every registered behavior tree node.
+ *
+ * The loader that produces this map is created ONCE and deliberately never destroyed.
+ *
+ * NodeRegistrationLoader is a pluginlib::ClassLoader, and this map used to be initialized from a
+ * TEMPORARY one right in TreeDocument's member-initializer list:
+ *
+ *   all_node_classes_package_map_(NodeRegistrationLoader().getClassPackageMap()),
+ *
+ * That temporary is destroyed at the end of the initializer -- i.e. in the middle of the
+ * constructor -- and its teardown dlclose()s the plugin libraries it had just dlopen()ed. macOS
+ * unmaps a dylib eagerly on dlclose, so the unwinding loader immediately dereferences unmapped
+ * memory and the process dies inside the constructor:
+ *
+ *   EXC_BAD_ACCESS (SIGSEGV) at 0x3b
+ *     class_loader::MultiLibraryClassLoader::getRegisteredLibraries()
+ *     class_loader::MultiLibraryClassLoader::shutdownAllClassLoaders()
+ *     class_loader::MultiLibraryClassLoader::~MultiLibraryClassLoader()
+ *     pluginlib::ClassLoader<NodeRegistrationInterface>::~ClassLoader()
+ *     auto_apms_behavior_tree::core::TreeDocument::TreeDocument(...)
+ *     main
+ *
+ * (observed as a bare "[node_model_native.xml] Segmentation fault: 11" from make, because the
+ * generator crashes before it can report anything). Linux glibc usually keeps the mapping
+ * resident, which is why this only bites on macOS.
+ *
+ * Keeping one leaked loader alive for the life of the process avoids the dlclose entirely, costs a
+ * single allocation, and makes the map cheaper too: it is identical for every TreeDocument, so it
+ * is now computed once instead of on every construction.
+ */
+const std::map<std::string, std::string> & getAllNodeClassesPackageMap()
+{
+  static const auto_apms_behavior_tree::core::NodeRegistrationLoader * const loader =
+    new auto_apms_behavior_tree::core::NodeRegistrationLoader();
+  static const std::map<std::string, std::string> map =
+    const_cast<auto_apms_behavior_tree::core::NodeRegistrationLoader *>(loader)->getClassPackageMap();
+  return map;
+}
+}  // namespace
+
 TreeDocument::TreeDocument(const std::string & format_version, NodeRegistrationLoader::SharedPtr tree_node_loader)
 // It's important to initialize XMLDocument using PRESERVE_WHITESPACE, since encoded port data (like
 // NodeRegistrationOptions) may be sensitive to changes in the whitespaces (think of the YAML format).
 : XMLDocument(true, tinyxml2::PRESERVE_WHITESPACE),
-  all_node_classes_package_map_(auto_apms_behavior_tree::core::NodeRegistrationLoader().getClassPackageMap()),
+  all_node_classes_package_map_(getAllNodeClassesPackageMap()),
   native_node_names_(BT::BehaviorTreeFactory().builtinNodes()),
   format_version_(format_version),
   tree_node_loader_ptr_(tree_node_loader),
