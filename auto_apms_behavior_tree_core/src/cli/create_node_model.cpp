@@ -179,18 +179,23 @@ int main(int argc, char ** argv)
 
     // Write to file
     doc.writeToFile(output_file.string());
+
+    // macOS: the model XML is written by now, so terminate HERE -- INSIDE the try -- before `doc`
+    // leaves scope. TreeDocument owns a pluginlib::ClassLoader whose destructor reaches
+    // class_loader::MultiLibraryClassLoader::shutdownAllClassLoaders() -> dlclose(); macOS unmaps
+    // eagerly, so the unwinding loader dereferences freed vtables and the process dies AFTER the
+    // file was written (make shows only "Segmentation fault: 11"). The _Exit that used to sit after
+    // the catch block was too late -- `doc` is scoped to the try, so its destructor ran first.
+    // Captured stack (.ips, kilted run 36981619539):
+    //   ~TreeDocument -> pluginlib::ClassLoader<...>::~ClassLoader
+    //   -> MultiLibraryClassLoader::shutdownAllClassLoaders() -> SIGSEGV
+    std::cout.flush();
+    std::cerr.flush();
+    std::_Exit(EXIT_SUCCESS);
   } catch (const std::exception & e) {
     std::cerr << "ERROR (create_node_model): " << e.what() << "\n";
     return EXIT_FAILURE;
   }
 
-  // macOS: the node model XML is fully written by now (doc.writeToFile above). Terminate with
-  // std::_Exit so the process does NOT run static/atexit destructors: the behavior-tree node
-  // plugins were dlopen'd (and intentionally leaked, above) and their exit-time destructors —
-  // run by the dynamic loader when the process unwinds — dereference code in dylibs being torn
-  // down, crashing AFTER the file is written ("[node_model_native.xml] Segmentation fault: 11").
-  // Skipping global teardown avoids that; a one-shot generator has nothing else to clean up.
-  std::cout.flush();
-  std::cerr.flush();
-  std::_Exit(EXIT_SUCCESS);
+  return EXIT_SUCCESS;  // unreachable: the _Exit inside the try above ends the process
 }
